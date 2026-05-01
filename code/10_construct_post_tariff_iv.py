@@ -2,28 +2,15 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 
-# -----------------------------
-# Paths
-# -----------------------------
 PROJECT_ROOT = Path("..")
 DATA_CLEAN = PROJECT_ROOT / "data_clean"
 
 in_path = DATA_CLEAN / "panel_dataset_with_unit_values.csv"
 out_path = DATA_CLEAN / "panel_dataset_with_unit_values_post_shock.csv"
 
-# -----------------------------
-# Load panel
-# -----------------------------
 df = pd.read_csv(in_path, dtype={"hts_code": str})
 df["hts_code"] = df["hts_code"].astype(str).str.zfill(8)
 
-# -----------------------------
-# Construct proper time-varying tariff shock
-# -----------------------------
-# Pre-period China exposure is import_share_pre.
-# Tariff turns on in 2018 for List 1 products.
-# Since this sample already consists of List 1 tariffed products,
-# post tariff change is coded as 0.25 from 2018 onward.
 df["post_2018"] = (df["year"] >= 2018).astype(int)
 
 df["tariff_change_post"] = 0.25 * df["post_2018"]
@@ -36,9 +23,6 @@ df["pred_tariff_shock_post"] = (
 # This is easier to read in regression tables.
 df["pred_tariff_shock_post_pp"] = df["pred_tariff_shock_post"] * 100
 
-# -----------------------------
-# Checks
-# -----------------------------
 print("Panel shape:", df.shape)
 
 print("\nYears:")
@@ -75,9 +59,6 @@ print(df[[
     "ln_import_unit_value"
 ]].head(12))
 
-# -----------------------------
-# Save
-# -----------------------------
 df.to_csv(out_path, index=False)
 
 print("\nSaved:", out_path)

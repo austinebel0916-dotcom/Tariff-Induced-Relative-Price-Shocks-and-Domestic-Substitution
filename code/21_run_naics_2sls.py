@@ -3,9 +3,6 @@ import numpy as np
 from pathlib import Path
 import statsmodels.api as sm
 
-# -----------------------------
-# Paths
-# -----------------------------
 PROJECT_ROOT = Path("..")
 DATA_CLEAN = PROJECT_ROOT / "data_clean"
 OUTPUT = PROJECT_ROOT / "output"
@@ -13,15 +10,9 @@ OUTPUT.mkdir(parents=True, exist_ok=True)
 
 panel_path = DATA_CLEAN / "naics4_iv_panel_2018_2020.csv"
 
-# -----------------------------
-# Load data
-# -----------------------------
 df = pd.read_csv(panel_path, dtype={"naics4": str})
 df["naics4"] = df["naics4"].astype(str).str.strip()
 
-# -----------------------------
-# Main regression sample
-# -----------------------------
 reg = df[
     (df["valid_domestic_share"] == True) &
     df["domestic_share"].notna() &
@@ -55,16 +46,9 @@ print(reg[[
     "china_share_pre_naics4"
 ]].describe())
 
-# -----------------------------
-# Year fixed effects
-# -----------------------------
 year_dummies = pd.get_dummies(reg["year"].astype(int), prefix="year", drop_first=True)
 year_dummies = year_dummies.astype(float)
 
-# -----------------------------
-# First stage
-# effective_duty_rate_pp = pi * predicted_tariff_shock + year FE
-# -----------------------------
 X_first = pd.concat([
     reg[["pred_tariff_shock_naics4_pp"]].astype(float),
     year_dummies
@@ -80,10 +64,6 @@ first_stage = sm.OLS(y_first, X_first).fit(
 
 reg["effective_duty_hat_pp"] = first_stage.fittedvalues
 
-# -----------------------------
-# Second stage
-# domestic_share_pct = beta * predicted effective duty rate + year FE
-# -----------------------------
 X_second = pd.concat([
     reg[["effective_duty_hat_pp"]].astype(float),
     year_dummies
@@ -97,10 +77,6 @@ second_stage = sm.OLS(y_second, X_second).fit(
     cov_kwds={"groups": reg["naics4"]}
 )
 
-# -----------------------------
-# Also run reduced form
-# domestic_share_pct = rho * predicted_tariff_shock + year FE
-# -----------------------------
 X_rf = pd.concat([
     reg[["pred_tariff_shock_naics4_pp"]].astype(float),
     year_dummies
@@ -114,9 +90,6 @@ reduced_form = sm.OLS(y_rf, X_rf).fit(
     cov_kwds={"groups": reg["naics4"]}
 )
 
-# -----------------------------
-# Print results
-# -----------------------------
 print("\n" + "=" * 80)
 print("FIRST STAGE")
 print("=" * 80)
@@ -132,9 +105,6 @@ print("REDUCED FORM")
 print("=" * 80)
 print(reduced_form.summary())
 
-# -----------------------------
-# Key coefficients
-# -----------------------------
 fs_coef = first_stage.params.get("pred_tariff_shock_naics4_pp")
 fs_se = first_stage.bse.get("pred_tariff_shock_naics4_pp")
 fs_t = first_stage.tvalues.get("pred_tariff_shock_naics4_pp")
@@ -174,9 +144,6 @@ print(f"Clustered SE: {rf_se}")
 print(f"t-stat: {rf_t}")
 print(f"p-value: {rf_p}")
 
-# -----------------------------
-# Save outputs
-# -----------------------------
 out_txt = OUTPUT / "naics4_preliminary_2sls_results.txt"
 
 with open(out_txt, "w") as f:
@@ -203,7 +170,6 @@ with open(out_txt, "w") as f:
 
 print("\nSaved results to:", out_txt)
 
-# Save regression sample with fitted values
 sample_out = DATA_CLEAN / "naics4_preliminary_2sls_sample.csv"
 reg.to_csv(sample_out, index=False)
 

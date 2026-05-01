@@ -3,9 +3,6 @@ import pandas as pd
 import statsmodels.api as sm
 import matplotlib.pyplot as plt
 
-# -----------------------------
-# Paths
-# -----------------------------
 PROJECT_ROOT = Path("..")
 DATA_CLEAN = PROJECT_ROOT / "data_clean"
 OUTPUT_FIG = PROJECT_ROOT / "output" / "figures"
@@ -19,23 +16,14 @@ table_path = OUTPUT_TABLE / "first_stage_results.csv"
 OUTPUT_FIG.mkdir(parents=True, exist_ok=True)
 OUTPUT_TABLE.mkdir(parents=True, exist_ok=True)
 
-# -----------------------------
-# Load data
-# -----------------------------
 df = pd.read_csv(data_path, dtype={"hts_code": str})
 
-# -----------------------------
-# Keep regression sample
-# -----------------------------
 df = df.dropna(subset=["pred_tariff_shock", "china_share"]).copy()
 
 print("Rows in regression sample:", len(df))
 print("Unique HTS8 products:", df["hts_code"].nunique())
 print("Years:", sorted(df["year"].unique()))
 
-# -----------------------------
-# Preliminary first-stage / exposure validation
-# -----------------------------
 X = sm.add_constant(df["pred_tariff_shock"])
 y = df["china_share"]
 
@@ -44,9 +32,6 @@ model = sm.OLS(y, X).fit(cov_type="HC1")
 print("\nPreliminary first-stage / exposure validation regression:")
 print(model.summary())
 
-# -----------------------------
-# Save compact regression table
-# -----------------------------
 results = pd.DataFrame({
     "term": model.params.index,
     "coefficient": model.params.values,

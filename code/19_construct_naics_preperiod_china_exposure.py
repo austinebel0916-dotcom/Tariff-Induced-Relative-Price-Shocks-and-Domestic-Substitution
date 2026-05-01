@@ -3,9 +3,6 @@ import pandas as pd
 from pathlib import Path
 import time
 
-# -----------------------------
-# Paths
-# -----------------------------
 PROJECT_ROOT = Path("..")
 DATA_RAW = PROJECT_ROOT / "data_raw"
 DATA_CLEAN = PROJECT_ROOT / "data_clean"
@@ -15,9 +12,6 @@ NAICS_RAW_DIR.mkdir(parents=True, exist_ok=True)
 
 asm_path = DATA_CLEAN / "asm_output_2018_2020.csv"
 
-# -----------------------------
-# Get NAICS4 manufacturing codes from ASM
-# -----------------------------
 asm = pd.read_csv(asm_path, dtype={"naics2017": str, "indlevel": str})
 
 naics4_codes = (
@@ -32,9 +26,6 @@ naics4_codes = (
 print("Number of NAICS4 codes from ASM:", len(naics4_codes))
 print("First 20 NAICS4 codes:", naics4_codes[:20])
 
-# -----------------------------
-# API setup
-# -----------------------------
 BASE_URL = "https://api.census.gov/data/timeseries/intltrade/imports/naicsimport"
 years = [2015, 2016, 2017]
 
@@ -64,21 +55,16 @@ def fetch_one_naics_year(naics4, year, geo_name, geo_for):
 
     df = pd.DataFrame(data[1:], columns=data[0])
 
-    # Drop duplicate columns returned by API, if any
     df = df.loc[:, ~df.columns.duplicated()]
 
     df["query_naics4"] = naics4
     df["query_year"] = year
     df["geo_name_query"] = geo_name
 
-    # Final safety check: make all column names unique
     df = df.loc[:, ~df.columns.duplicated()]
 
     return df
 
-# -----------------------------
-# Download loop
-# -----------------------------
 geos = [
     ("world_total", "world:*"),
     ("china", "usitc standard countries and areas:5700"),
@@ -101,7 +87,6 @@ if len(chunks) == 0:
     print("No import data downloaded.")
     raise SystemExit
 
-# Make sure every chunk has unique column names before concatenation
 clean_chunks = []
 for chunk in chunks:
     chunk = chunk.loc[:, ~chunk.columns.duplicated()].copy()
@@ -112,9 +97,6 @@ chunks = clean_chunks
 imports = pd.concat(chunks, ignore_index=True)
 imports = imports.loc[:, ~imports.columns.duplicated()]
 
-# -----------------------------
-# Clean
-# -----------------------------
 imports = imports.rename(columns={
     "NAME": "geo_name",
     "NAICS": "naics",
@@ -136,17 +118,11 @@ imports["naics4"] = imports["naics4"].astype(str).str.strip()
 imports["geo_name"] = imports["geo_name"].astype(str).str.strip()
 imports["geo_name_query"] = imports["geo_name_query"].astype(str).str.strip()
 
-# -----------------------------
-# Save raw country/geo-level data
-# -----------------------------
 raw_out = NAICS_RAW_DIR / "naics4_imports_world_china_2015_2017_raw.csv"
 imports.to_csv(raw_out, index=False)
 
 print("\nSaved raw NAICS4 world/China imports to:", raw_out)
 
-# -----------------------------
-# Build pre-period China share
-# -----------------------------
 total_imports = imports[imports["geo_name_query"] == "world_total"].copy()
 china_imports = imports[imports["geo_name_query"] == "china"].copy()
 
@@ -174,17 +150,11 @@ pre_shares["china_share_pre_naics4"] = (
     pre_shares["china_imports_pre"] / pre_shares["total_imports_pre"]
 )
 
-# -----------------------------
-# Save clean pre-period exposure
-# -----------------------------
 clean_out = DATA_CLEAN / "naics4_china_share_pre_2015_2017.csv"
 pre_shares.to_csv(clean_out, index=False)
 
 print("Saved clean NAICS4 pre-period China shares to:", clean_out)
 
-# -----------------------------
-# Inspect
-# -----------------------------
 print("\nRaw imports shape:")
 print(imports.shape)
 

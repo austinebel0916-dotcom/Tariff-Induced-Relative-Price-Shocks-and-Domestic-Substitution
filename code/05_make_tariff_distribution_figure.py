@@ -2,9 +2,6 @@ from pathlib import Path
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# -----------------------------
-# Paths
-# -----------------------------
 PROJECT_ROOT = Path("..")
 DATA_CLEAN = PROJECT_ROOT / "data_clean"
 OUTPUT_FIG = PROJECT_ROOT / "output" / "figures"
@@ -14,14 +11,8 @@ fig_path = OUTPUT_FIG / "tariff_distribution.png"
 
 OUTPUT_FIG.mkdir(parents=True, exist_ok=True)
 
-# -----------------------------
-# Load tariff data
-# -----------------------------
 df = pd.read_csv(input_path, dtype={"hts_code": str})
 
-# -----------------------------
-# HTS 2-digit industry labels
-# -----------------------------
 df["hts2"] = df["hts_code"].str[:2]
 
 hts_labels = {
@@ -39,9 +30,6 @@ hts_labels = {
 
 df["industry_name"] = df["hts2"].map(hts_labels).fillna(df["hts2"])
 
-# -----------------------------
-# Count tariffed 8-digit products by industry
-# -----------------------------
 counts = (
     df.groupby(["hts2", "industry_name"], as_index=False)
     .size()
@@ -51,9 +39,6 @@ counts = (
 
 counts = counts[counts["tariffed_products"] > 10]
 
-# -----------------------------
-# Plot
-# -----------------------------
 plt.figure(figsize=(9, 6))
 
 plt.bar(

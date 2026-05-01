@@ -3,9 +3,6 @@ import pandas as pd
 from pathlib import Path
 import time
 
-# -----------------------------
-# Paths
-# -----------------------------
 PROJECT_ROOT = Path("..")
 DATA_RAW = PROJECT_ROOT / "data_raw"
 DATA_CLEAN = PROJECT_ROOT / "data_clean"
@@ -15,9 +12,6 @@ NAICS_RAW_DIR.mkdir(parents=True, exist_ok=True)
 
 asm_path = DATA_CLEAN / "asm_output_2018_2020.csv"
 
-# -----------------------------
-# Get NAICS4 manufacturing codes from ASM
-# -----------------------------
 asm = pd.read_csv(asm_path, dtype={"naics2017": str, "indlevel": str})
 
 naics4_codes = (
@@ -32,9 +26,6 @@ naics4_codes = (
 print("Number of NAICS4 codes from ASM:", len(naics4_codes))
 print("First 20 NAICS4 codes:", naics4_codes[:20])
 
-# -----------------------------
-# API setup
-# -----------------------------
 BASE_URL = "https://api.census.gov/data/timeseries/intltrade/exports/naics"
 years = [2018, 2019, 2020]
 
@@ -65,9 +56,6 @@ def fetch_one_naics_year(naics4, year):
     df["query_year"] = year
     return df
 
-# -----------------------------
-# Download loop
-# -----------------------------
 chunks = []
 
 for year in years:
@@ -86,12 +74,8 @@ if len(chunks) == 0:
 
 exports = pd.concat(chunks, ignore_index=True)
 
-# Remove duplicate columns just in case
 exports = exports.loc[:, ~exports.columns.duplicated()]
 
-# -----------------------------
-# Clean
-# -----------------------------
 exports = exports.rename(columns={
     "NAICS": "naics",
     "NAICS_SDESC": "naics_desc",
@@ -112,18 +96,12 @@ exports["cty_code"] = exports["cty_code"].astype(str).str.strip()
 exports["cty_name"] = exports["cty_name"].astype(str).str.strip()
 exports["naics_desc"] = exports["naics_desc"].astype(str).str.strip()
 
-# -----------------------------
-# Aggregate across countries/destinations
-# -----------------------------
 exports_naics4 = (
     exports
     .groupby(["naics4", "year"], as_index=False)
     .agg(exports_total=("exports_total", "sum"))
 )
 
-# -----------------------------
-# Save
-# -----------------------------
 raw_out = NAICS_RAW_DIR / "naics4_exports_2018_2020_raw_loop.csv"
 clean_out = DATA_CLEAN / "naics4_exports_2018_2020.csv"
 
@@ -133,9 +111,6 @@ exports_naics4.to_csv(clean_out, index=False)
 print("\nSaved raw NAICS4 exports to:", raw_out)
 print("Saved clean NAICS4 exports to:", clean_out)
 
-# -----------------------------
-# Inspect
-# -----------------------------
 print("\nRaw shape:")
 print(exports.shape)
 

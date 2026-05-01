@@ -2,9 +2,6 @@ from pathlib import Path
 import pandas as pd
 import numpy as np
 
-# -----------------------------
-# Paths
-# -----------------------------
 PROJECT_ROOT = Path("..")
 DATA_CLEAN = PROJECT_ROOT / "data_clean"
 
@@ -14,20 +11,13 @@ tariff_path = DATA_CLEAN / "list1_tariffs.csv"
 
 output_path = DATA_CLEAN / "panel_dataset.csv"
 
-# -----------------------------
-# Load data
-# -----------------------------
 trade = pd.read_csv(trade_path, dtype={"hts_code": str})
 shares = pd.read_csv(shares_path, dtype={"hts_code": str})
 tariffs = pd.read_csv(tariff_path, dtype={"hts_code": str})
 
-# -----------------------------
-# Clean country fields
-# -----------------------------
 trade["cty_name"] = trade["cty_name"].astype(str).str.strip()
 trade["cty_code"] = trade["cty_code"].astype(str).str.strip()
 
-# Remove aggregates again (important)
 trade = trade[trade["cty_code"] != "-"].copy()
 trade = trade[trade["cty_code"].str.fullmatch(r"\d+")].copy()
 
@@ -40,18 +30,12 @@ aggregate_patterns = [
 pattern = "|".join(aggregate_patterns)
 trade = trade[~trade["cty_name"].str.upper().str.contains(pattern, na=False, regex=True)].copy()
 
-# -----------------------------
-# Total imports per product-year
-# -----------------------------
 total_imports = (
     trade.groupby(["hts_code", "year"], as_index=False)["import_value"]
     .sum()
     .rename(columns={"import_value": "imports_total"})
 )
 
-# -----------------------------
-# China imports
-# -----------------------------
 china_imports = (
     trade[trade["cty_name"].str.upper() == "CHINA"]
     .groupby(["hts_code", "year"], as_index=False)["import_value"]
@@ -59,18 +43,11 @@ china_imports = (
     .rename(columns={"import_value": "imports_china"})
 )
 
-# Merge
 panel = total_imports.merge(china_imports, on=["hts_code", "year"], how="left")
 panel["imports_china"] = panel["imports_china"].fillna(0)
 
-# -----------------------------
-# China share over time
-# -----------------------------
 panel["china_share"] = panel["imports_china"] / panel["imports_total"]
 
-# -----------------------------
-# Construct instrument (PredTariffShock)
-# -----------------------------
 china_pre = shares[shares["cty_name"].str.upper() == "CHINA"].copy()
 china_pre = china_pre[["hts_code", "import_share_pre"]]
 
@@ -79,19 +56,10 @@ panel = panel.merge(tariffs[["hts_code", "tariff_change"]], on="hts_code", how="
 
 panel["pred_tariff_shock"] = panel["import_share_pre"] * panel["tariff_change"]
 
-# -----------------------------
-# Log outcome
-# -----------------------------
 panel["ln_imports_total"] = np.log(panel["imports_total"] + 1)
 
-# -----------------------------
-# Save
-# -----------------------------
 panel.to_csv(output_path, index=False)
 
-# -----------------------------
-# Diagnostics
-# -----------------------------
 print("Saved panel dataset to:", output_path)
 print("\nPreview:")
 print(panel.head())

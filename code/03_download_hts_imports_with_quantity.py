@@ -3,25 +3,18 @@ import time
 import requests
 import pandas as pd
 
-# -----------------------------
-# Paths
-# -----------------------------
 PROJECT_ROOT = Path("..")
 DATA_CLEAN = PROJECT_ROOT / "data_clean"
 DATA_RAW = PROJECT_ROOT / "data_raw"
 TRADE_RAW_DIR = DATA_RAW / "trade_api"
 TRADE_RAW_DIR.mkdir(parents=True, exist_ok=True)
 
-# -----------------------------
-# Inputs
-# -----------------------------
 tariff_path = DATA_CLEAN / "list1_tariffs.csv"
 tariffs = pd.read_csv(tariff_path, dtype={"hts_code": str})
 
 tariffed_hts8 = set(tariffs["hts_code"].str.replace(".", "", regex=False).str.zfill(8))
 prefixes = sorted({code[:2] for code in tariffed_hts8})
 
-# Full panel years
 years = [2015, 2016, 2017, 2018, 2019, 2020]
 
 BASE_URL = "https://api.census.gov/data/timeseries/intltrade/imports/hs"
@@ -60,9 +53,6 @@ def fetch_trade_chunk(year: int, prefix: str) -> pd.DataFrame:
     df = pd.DataFrame(data[1:], columns=data[0])
     return df
 
-# -----------------------------
-# Download loop
-# -----------------------------
 all_chunks = []
 
 for year in years:
@@ -76,9 +66,6 @@ for year in years:
 
 raw_trade = pd.concat(all_chunks, ignore_index=True)
 
-# -----------------------------
-# Clean and standardize
-# -----------------------------
 raw_trade = raw_trade.rename(columns={
     "I_COMMODITY": "hts10",
     "CTY_CODE": "cty_code",
@@ -105,14 +92,8 @@ for col in ["import_value", "import_qty1", "import_qty2"]:
 
 raw_trade["hts_code"] = raw_trade["hts10"].str[:8]
 
-# Keep only tariffed 8-digit products from List 1
 trade_filtered = raw_trade[raw_trade["hts_code"].isin(tariffed_hts8)].copy()
 
-# -----------------------------
-# Aggregate HS10 -> HTS8 within country-year
-# -----------------------------
-# Important: quantities are summed only within the same HTS8-country-year.
-# Unit labels are preserved as comma-separated unique values so we can audit them.
 trade_hts8 = (
     trade_filtered
     .groupby(["hts_code", "cty_code", "cty_name", "query_year"], as_index=False)
@@ -126,9 +107,6 @@ trade_hts8 = (
     .rename(columns={"query_year": "year"})
 )
 
-# -----------------------------
-# Save outputs
-# -----------------------------
 raw_out = TRADE_RAW_DIR / "imports_hs10_2015_2020_raw_with_quantity.csv"
 filtered_out = DATA_CLEAN / "imports_hts8_country_2015_2020_with_quantity.csv"
 

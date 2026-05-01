@@ -3,9 +3,6 @@ import pandas as pd
 from pathlib import Path
 import time
 
-# -----------------------------
-# Paths
-# -----------------------------
 PROJECT_ROOT = Path("..")
 DATA_RAW = PROJECT_ROOT / "data_raw"
 DATA_CLEAN = PROJECT_ROOT / "data_clean"
@@ -13,9 +10,6 @@ DATA_CLEAN = PROJECT_ROOT / "data_clean"
 NAICS_RAW_DIR = DATA_RAW / "naics_trade"
 NAICS_RAW_DIR.mkdir(parents=True, exist_ok=True)
 
-# -----------------------------
-# API setup
-# -----------------------------
 BASE_URL = "https://api.census.gov/data/timeseries/intltrade/imports/naicsimport"
 
 years = [2018, 2019, 2020]
@@ -49,9 +43,6 @@ def fetch_naics_imports_year(year):
     df["query_year"] = year
     return df
 
-# -----------------------------
-# Download loop
-# -----------------------------
 all_years = []
 
 for year in years:
@@ -62,12 +53,8 @@ for year in years:
 
 imports = pd.concat(all_years, ignore_index=True)
 
-# Remove duplicate columns just in case
 imports = imports.loc[:, ~imports.columns.duplicated()]
 
-# -----------------------------
-# Clean
-# -----------------------------
 imports = imports.rename(columns={
     "NAME": "geo_name",
     "NAICS": "naics",
@@ -90,10 +77,6 @@ imports["naics"] = imports["naics"].astype(str).str.strip()
 imports["cty_code"] = imports["cty_code"].astype(str).str.strip()
 imports["naics_desc"] = imports["naics_desc"].astype(str).str.strip()
 
-# -----------------------------
-# Build NAICS4
-# -----------------------------
-# Keep manufacturing-style numeric NAICS codes only.
 imports["naics4"] = imports["naics"].str[:4]
 
 imports_naics4 = (
@@ -107,9 +90,6 @@ imports_naics4 = (
     )
 )
 
-# -----------------------------
-# Save
-# -----------------------------
 raw_out = NAICS_RAW_DIR / "naics_imports_2018_2020_raw.csv"
 clean_out = DATA_CLEAN / "naics4_imports_2018_2020.csv"
 

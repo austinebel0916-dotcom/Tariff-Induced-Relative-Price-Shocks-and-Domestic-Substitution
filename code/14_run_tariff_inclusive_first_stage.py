@@ -3,9 +3,6 @@ import numpy as np
 from pathlib import Path
 import statsmodels.api as sm
 
-# -----------------------------
-# Paths
-# -----------------------------
 PROJECT_ROOT = Path("..")
 DATA_CLEAN = PROJECT_ROOT / "data_clean"
 OUTPUT = PROJECT_ROOT / "output"
@@ -13,15 +10,9 @@ OUTPUT.mkdir(parents=True, exist_ok=True)
 
 panel_path = DATA_CLEAN / "panel_dataset_with_tariff_inclusive_price.csv"
 
-# -----------------------------
-# Load data
-# -----------------------------
 df = pd.read_csv(panel_path, dtype={"hts_code": str})
 df["hts_code"] = df["hts_code"].astype(str).str.zfill(8)
 
-# -----------------------------
-# Keep usable first-stage sample
-# -----------------------------
 reg = df[
     df["ln_china_unit_value_tariff_inclusive"].notna() &
     df["pred_tariff_shock_post_pp"].notna()
@@ -42,13 +33,6 @@ print(reg.groupby("year")["pred_tariff_shock_post_pp"].mean())
 
 print("\nNon-missing observations by year:")
 print(reg.groupby("year")["ln_china_unit_value_tariff_inclusive"].count())
-
-# -----------------------------
-# Two-way fixed effect demeaning
-# -----------------------------
-# Equivalent to:
-# ln_china_unit_value_tariff_inclusive
-#   ~ pred_tariff_shock_post_pp + product FE + year FE
 
 y = "ln_china_unit_value_tariff_inclusive"
 x = "pred_tariff_shock_post_pp"
@@ -73,9 +57,6 @@ reg["x_twfe"] = (
 print("\nTWFE residualized variation:")
 print(reg[["y_twfe", "x_twfe"]].describe())
 
-# -----------------------------
-# First-stage regression
-# -----------------------------
 X = sm.add_constant(reg["x_twfe"])
 Y = reg["y_twfe"]
 
@@ -86,9 +67,6 @@ model = sm.OLS(Y, X).fit(
 
 print(model.summary())
 
-# -----------------------------
-# Save results
-# -----------------------------
 out_path = OUTPUT / "first_stage_tariff_inclusive_price_results.txt"
 
 with open(out_path, "w") as f:
@@ -96,9 +74,6 @@ with open(out_path, "w") as f:
 
 print("\nSaved first-stage results to:", out_path)
 
-# -----------------------------
-# Print key coefficient only
-# -----------------------------
 coef = model.params.get("x_twfe")
 se = model.bse.get("x_twfe")
 pval = model.pvalues.get("x_twfe")

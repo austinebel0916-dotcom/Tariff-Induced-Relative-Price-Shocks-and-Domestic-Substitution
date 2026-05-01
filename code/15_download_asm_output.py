@@ -3,9 +3,6 @@ import pandas as pd
 from pathlib import Path
 import time
 
-# -----------------------------
-# Paths
-# -----------------------------
 PROJECT_ROOT = Path("..")
 DATA_RAW = PROJECT_ROOT / "data_raw"
 DATA_CLEAN = PROJECT_ROOT / "data_clean"
@@ -13,19 +10,9 @@ DATA_CLEAN = PROJECT_ROOT / "data_clean"
 ASM_RAW_DIR = DATA_RAW / "asm"
 ASM_RAW_DIR.mkdir(parents=True, exist_ok=True)
 
-# -----------------------------
-# API setup
-# -----------------------------
 BASE_URL = "https://api.census.gov/data/timeseries/asm/area2017"
 
 years = [2018, 2019, 2020]
-
-# Variables:
-# NAICS2017 = NAICS industry code
-# INDLEVEL = industry aggregation level
-# RCPTOT = sales, value of shipments, or revenue ($1,000)
-# EMP = employment, useful as a check/control later
-# PAYANN = annual payroll, useful as a check/control later
 
 def fetch_asm_year(year):
     params = {
@@ -47,9 +34,6 @@ def fetch_asm_year(year):
     df["query_year"] = year
     return df
 
-# -----------------------------
-# Download loop
-# -----------------------------
 all_years = []
 
 for year in years:
@@ -60,9 +44,6 @@ for year in years:
 
 asm = pd.concat(all_years, ignore_index=True)
 
-# -----------------------------
-# Clean
-# -----------------------------
 asm = asm.rename(columns={
     "NAICS2017": "naics2017",
     "INDLEVEL": "indlevel",
@@ -79,12 +60,8 @@ asm["year"] = pd.to_numeric(asm["year"], errors="coerce")
 asm["naics2017"] = asm["naics2017"].astype(str).str.strip()
 asm["indlevel"] = asm["indlevel"].astype(str).str.strip()
 
-# Convert $1,000 units to dollars
 asm["domestic_output"] = asm["shipments_revenue_1000"] * 1000
 
-# -----------------------------
-# Save
-# -----------------------------
 raw_out = ASM_RAW_DIR / "asm_output_2018_2020_raw.csv"
 clean_out = DATA_CLEAN / "asm_output_2018_2020.csv"
 

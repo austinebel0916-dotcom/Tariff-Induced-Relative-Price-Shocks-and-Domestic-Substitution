@@ -2,9 +2,6 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 
-# -----------------------------
-# Paths
-# -----------------------------
 PROJECT_ROOT = Path("..")
 DATA_CLEAN = PROJECT_ROOT / "data_clean"
 
@@ -14,16 +11,10 @@ exports_path = DATA_CLEAN / "naics4_exports_2018_2020.csv"
 
 out_path = DATA_CLEAN / "naics4_domestic_absorption_panel_2018_2020.csv"
 
-# -----------------------------
-# Load data
-# -----------------------------
 asm = pd.read_csv(asm_path, dtype={"naics2017": str, "indlevel": str})
 imports = pd.read_csv(imports_path, dtype={"naics4": str})
 exports = pd.read_csv(exports_path, dtype={"naics4": str})
 
-# -----------------------------
-# Keep ASM NAICS4 industries
-# -----------------------------
 asm4 = asm[asm["indlevel"].astype(str).str.strip() == "4"].copy()
 
 asm4 = asm4.rename(columns={
@@ -47,9 +38,6 @@ asm4 = asm4[[
     "annual_payroll_1000"
 ]].copy()
 
-# -----------------------------
-# Clean imports
-# -----------------------------
 imports["naics4"] = imports["naics4"].astype(str).str.strip()
 imports["year"] = pd.to_numeric(imports["year"], errors="coerce")
 
@@ -61,7 +49,6 @@ imports = imports[
 for col in ["imports_consumption", "imports_general", "calculated_duty", "dutiable_value"]:
     imports[col] = pd.to_numeric(imports[col], errors="coerce").fillna(0)
 
-# If the earlier imports file contains any duplicates after filtering, collapse safely.
 imports4 = (
     imports
     .groupby(["naics4", "year"], as_index=False)
@@ -73,9 +60,6 @@ imports4 = (
     )
 )
 
-# -----------------------------
-# Clean exports
-# -----------------------------
 exports["naics4"] = exports["naics4"].astype(str).str.strip()
 exports["year"] = pd.to_numeric(exports["year"], errors="coerce")
 exports["exports_total"] = pd.to_numeric(exports["exports_total"], errors="coerce").fillna(0)
@@ -91,9 +75,6 @@ exports4 = (
     .agg(exports_total=("exports_total", "sum"))
 )
 
-# -----------------------------
-# Merge
-# -----------------------------
 panel = asm4.merge(
     imports4,
     on=["naics4", "year"],
@@ -108,13 +89,9 @@ panel = panel.merge(
     validate="one_to_one"
 )
 
-# Fill missing trade values with zero only after merge
 for col in ["imports_consumption", "imports_general", "calculated_duty", "dutiable_value", "exports_total"]:
     panel[col] = panel[col].fillna(0)
 
-# -----------------------------
-# Construct domestic absorption outcome
-# -----------------------------
 panel["domestic_supply_for_us"] = panel["domestic_output"] - panel["exports_total"]
 
 panel["domestic_absorption"] = (
@@ -129,7 +106,6 @@ panel["import_share_absorption"] = (
     panel["imports_consumption"] / panel["domestic_absorption"]
 )
 
-# Optional logs for later regressions
 panel["ln_domestic_output"] = np.where(
     panel["domestic_output"] > 0,
     np.log(panel["domestic_output"]),
@@ -142,16 +118,12 @@ panel["ln_imports_consumption"] = np.where(
     np.nan
 )
 
-# Effective duty rate, useful later as descriptive evidence
 panel["effective_duty_rate"] = np.where(
     panel["dutiable_value"] > 0,
     panel["calculated_duty"] / panel["dutiable_value"],
     np.nan
 )
 
-# -----------------------------
-# Checks
-# -----------------------------
 print("ASM4 shape:", asm4.shape)
 print("Imports4 shape:", imports4.shape)
 print("Exports4 shape:", exports4.shape)
@@ -209,9 +181,6 @@ print(panel[[
     "effective_duty_rate"
 ]].head(30))
 
-# -----------------------------
-# Save
-# -----------------------------
 panel.to_csv(out_path, index=False)
 
 print("\nSaved:", out_path)
